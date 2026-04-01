@@ -148,9 +148,10 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static `
             -DQt6_DIR="$env:Qt6_DIR" `
-            -DCMAKE_MAP_IMPORTED_CONFIG_DEBUG=RelWithDebInfo `
-            -DCMAKE_MAP_IMPORTED_CONFIG_RELEASE=RelWithDebInfo `
-            -DCMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL=RelWithDebInfo
+            "-DCMAKE_MAP_IMPORTED_CONFIG_DEBUG=RelWithDebInfo" `
+            "-DCMAKE_MAP_IMPORTED_CONFIG_RELEASE=RelWithDebInfo" `
+            "-DCMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL=RelWithDebInfo" `
+            -DVCPKG_BUILD_TYPE=release
 
       - name: Build plugin
         run: cmake --build build --config RelWithDebInfo --parallel
