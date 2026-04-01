@@ -118,12 +118,17 @@ jobs:
             -DENABLE_PLUGINS=OFF `
             -DENABLE_HEVC=OFF
 
-      # Build only the two targets we need, then install headers + .lib files
+      # Build only the two targets we need, then install headers + .lib files.
+      # The CMake target for the core library is "libobs", not "obs".
       - name: Build OBS libs
         shell: pwsh
         run: |
           cmake --build C:\obs-build --config RelWithDebInfo `
-            --target obs obs-frontend-api --parallel
+            --target libobs obs-frontend-api --parallel
+
+      - name: Install OBS SDK
+        shell: pwsh
+        run: |
           cmake --install C:\obs-build --config RelWithDebInfo `
             --component Development
 
