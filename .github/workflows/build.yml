@@ -128,13 +128,26 @@ jobs:
                        Select-Object -First 1).DirectoryName
           $frontendLib = (Get-ChildItem C:\obs-windows -Recurse -Filter "obs-frontend-api.lib" |
                             Select-Object -First 1).FullName
+          # Compute paths before the here-string so no expressions are needed inside it.
+          # On Windows the .dll is not needed at link time (IMPORTED_IMPLIB is enough),
+          # so we reuse the .lib path as a dummy IMPORTED_LOCATION to satisfy CMake.
+          $obsLib      = "$libDir/obs.lib"
+          $feLib       = $frontendLib -replace '\\','/'
 
           $shim = @"
+          cmake_minimum_required(VERSION 3.22)
           if(NOT TARGET OBS::libobs)
             add_library(OBS::libobs SHARED IMPORTED GLOBAL)
             set_target_properties(OBS::libobs PROPERTIES
-              IMPORTED_IMPLIB  "$libDir/obs.lib"
-              IMPORTED_LOCATION "$libDir/obs.dll"
+              IMPORTED_CONFIGURATIONS "RelWithDebInfo;Release;Debug;MinSizeRel"
+              IMPORTED_IMPLIB_RELWITHDEBINFO  "$obsLib"
+              IMPORTED_LOCATION_RELWITHDEBINFO "$obsLib"
+              IMPORTED_IMPLIB_RELEASE          "$obsLib"
+              IMPORTED_LOCATION_RELEASE        "$obsLib"
+              IMPORTED_IMPLIB_DEBUG            "$obsLib"
+              IMPORTED_LOCATION_DEBUG          "$obsLib"
+              IMPORTED_IMPLIB_MINSIZEREL       "$obsLib"
+              IMPORTED_LOCATION_MINSIZEREL     "$obsLib"
             )
             target_include_directories(OBS::libobs INTERFACE
               "C:/obs-headers"
@@ -144,8 +157,15 @@ jobs:
           if(NOT TARGET OBS::obs-frontend-api)
             add_library(OBS::obs-frontend-api SHARED IMPORTED GLOBAL)
             set_target_properties(OBS::obs-frontend-api PROPERTIES
-              IMPORTED_IMPLIB  "$frontendLib"
-              IMPORTED_LOCATION "${frontendLib.Replace('.lib','.dll')}"
+              IMPORTED_CONFIGURATIONS "RelWithDebInfo;Release;Debug;MinSizeRel"
+              IMPORTED_IMPLIB_RELWITHDEBINFO  "$feLib"
+              IMPORTED_LOCATION_RELWITHDEBINFO "$feLib"
+              IMPORTED_IMPLIB_RELEASE          "$feLib"
+              IMPORTED_LOCATION_RELEASE        "$feLib"
+              IMPORTED_IMPLIB_DEBUG            "$feLib"
+              IMPORTED_LOCATION_DEBUG          "$feLib"
+              IMPORTED_IMPLIB_MINSIZEREL       "$feLib"
+              IMPORTED_LOCATION_MINSIZEREL     "$feLib"
             )
             target_include_directories(OBS::obs-frontend-api INTERFACE
               "C:/obs-headers/frontend/api"
