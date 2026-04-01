@@ -147,7 +147,10 @@ jobs:
             -DCMAKE_PREFIX_PATH="C:\obs-install;$obsDeps" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static `
-            -DQt6_DIR="$env:Qt6_DIR"
+            -DQt6_DIR="$env:Qt6_DIR" `
+            -DCMAKE_MAP_IMPORTED_CONFIG_DEBUG=RelWithDebInfo `
+            -DCMAKE_MAP_IMPORTED_CONFIG_RELEASE=RelWithDebInfo `
+            -DCMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL=RelWithDebInfo
 
       - name: Build plugin
         run: cmake --build build --config RelWithDebInfo --parallel
