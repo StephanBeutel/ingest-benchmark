@@ -92,16 +92,11 @@ jobs:
       - name: Install libcurl
         shell: pwsh
         run: |
-          # Install a release-only custom triplet so vcpkg doesn't generate
-          # Debug/MinSizeRel/Release imported-target entries that have no .lib.
-          $tripletFile = "$env:VCPKG_INSTALLATION_ROOT\triplets\community\x64-windows-static-release.cmake"
+          $tripletDir = "$env:VCPKG_INSTALLATION_ROOT\triplets\community"
+          $tripletFile = "$tripletDir\x64-windows-static-release.cmake"
           if (-not (Test-Path $tripletFile)) {
-            @"
-set(VCPKG_TARGET_ARCHITECTURE x64)
-set(VCPKG_CRT_LINKAGE static)
-set(VCPKG_LIBRARY_LINKAGE static)
-set(VCPKG_BUILD_TYPE release)
-"@ | Set-Content $tripletFile
+            $content = "set(VCPKG_TARGET_ARCHITECTURE x64)`nset(VCPKG_CRT_LINKAGE static)`nset(VCPKG_LIBRARY_LINKAGE static)`nset(VCPKG_BUILD_TYPE release)"
+            Set-Content -Path $tripletFile -Value $content
           }
           vcpkg install "curl:x64-windows-static-release"
 
