@@ -1,0 +1,214 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # macOS (arm64)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS (arm64)
+    runs-on: macos-15
+
+    env:
+      OBS_VERSION: "32.1.0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # OBS source headers (shallow clone — we only need the header files)
+      - name: Clone OBS source headers
+        run: |
+          git clone --depth 1 --branch "$OBS_VERSION" \
+            https://github.com/obsproject/obs-studio.git /tmp/obs-headers
+
+      # OBS.app binary — provides libobs.framework, obs-frontend-api dylib, Qt frameworks
+      - name: Download and mount OBS.app
+        run: |
+          curl -L --retry 3 -o /tmp/obs.dmg \
+            "https://github.com/obsproject/obs-studio/releases/download/${OBS_VERSION}/OBS-Studio-${OBS_VERSION}-macOS-Apple.dmg"
+          hdiutil attach /tmp/obs.dmg -mountpoint /Volumes/OBS -nobrowse -quiet
+          cp -R "/Volumes/OBS/OBS.app" /Applications/OBS.app
+          hdiutil detach /Volumes/OBS -quiet
+
+      # Homebrew Qt — headers + MOC/UIC tools only; we link against OBS's bundled Qt
+      - name: Install build tools
+        run: |
+          brew install qt@6 simde cmake
+          echo "$(brew --prefix qt@6)/bin" >> "$GITHUB_PATH"
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DOBS_APP=/Applications/OBS.app \
+            -DOBS_SOURCE_DIR=/tmp/obs-headers \
+            -DQt6_DIR="$(brew --prefix qt@6)/lib/cmake/Qt6"
+
+      - name: Build
+        run: cmake --build build --config RelWithDebInfo --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp -R build/obs-twitch-ingest-benchmark.plugin dist/
+          cd dist
+          zip -r ../obs-twitch-ingest-benchmark-macos-arm64.zip \
+            obs-twitch-ingest-benchmark.plugin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obs-twitch-ingest-benchmark-macos
+          path: obs-twitch-ingest-benchmark-macos-arm64.zip
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Windows (x64)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows (x64)
+    runs-on: windows-2022
+
+    env:
+      OBS_VERSION: "32.1.0"
+      QT_VERSION: "6.8.1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Qt via aqtinstall (fast, no Qt account needed)
+      - name: Install Qt ${{ env.QT_VERSION }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          cache: true
+
+      # OBS source headers
+      - name: Clone OBS source headers
+        run: |
+          git clone --depth 1 --branch "$env:OBS_VERSION" `
+            https://github.com/obsproject/obs-studio.git C:\obs-headers
+        shell: pwsh
+
+      # OBS Windows runtime zip — contains obs.lib, obs-frontend-api.lib in bin/64bit
+      - name: Download OBS Windows runtime
+        shell: pwsh
+        run: |
+          $url = "https://github.com/obsproject/obs-studio/releases/download/$env:OBS_VERSION/OBS-Studio-$env:OBS_VERSION-Windows-x64.zip"
+          Invoke-WebRequest -Uri $url -OutFile obs-windows.zip -TimeoutSec 300
+          Expand-Archive obs-windows.zip -DestinationPath C:\obs-windows
+
+      # Inspect the layout so we can point CMake at the right paths
+      - name: Inspect OBS layout
+        shell: pwsh
+        run: |
+          Write-Host "=== OBS Windows zip layout (top 40 files) ==="
+          Get-ChildItem C:\obs-windows -Recurse -File |
+            Select-Object -First 40 -ExpandProperty FullName
+          Write-Host "=== .lib files ==="
+          Get-ChildItem C:\obs-windows -Recurse -Filter "*.lib" |
+            Select-Object -ExpandProperty FullName
+
+      # libcurl from vcpkg (already installed on windows-2022 runners)
+      - name: Install libcurl
+        run: vcpkg install curl:x64-windows-static
+        shell: cmd
+
+      # Generate a minimal CMake find-package config so CMake can locate
+      # OBS targets from the source headers + runtime zip
+      - name: Write OBS cmake shim
+        shell: pwsh
+        run: |
+          $libDir = (Get-ChildItem C:\obs-windows -Recurse -Filter "obs.lib" |
+                       Select-Object -First 1).DirectoryName
+          $frontendLib = (Get-ChildItem C:\obs-windows -Recurse -Filter "obs-frontend-api.lib" |
+                            Select-Object -First 1).FullName
+
+          $shim = @"
+          if(NOT TARGET OBS::libobs)
+            add_library(OBS::libobs SHARED IMPORTED GLOBAL)
+            set_target_properties(OBS::libobs PROPERTIES
+              IMPORTED_IMPLIB  "$libDir/obs.lib"
+              IMPORTED_LOCATION "$libDir/obs.dll"
+            )
+            target_include_directories(OBS::libobs INTERFACE
+              "C:/obs-headers"
+              "C:/obs-headers/libobs"
+            )
+          endif()
+          if(NOT TARGET OBS::obs-frontend-api)
+            add_library(OBS::obs-frontend-api SHARED IMPORTED GLOBAL)
+            set_target_properties(OBS::obs-frontend-api PROPERTIES
+              IMPORTED_IMPLIB  "$frontendLib"
+              IMPORTED_LOCATION "${frontendLib.Replace('.lib','.dll')}"
+            )
+            target_include_directories(OBS::obs-frontend-api INTERFACE
+              "C:/obs-headers/frontend/api"
+            )
+            target_link_libraries(OBS::obs-frontend-api INTERFACE OBS::libobs)
+          endif()
+          "@
+
+          New-Item -ItemType Directory -Force C:\obs-cmake | Out-Null
+          Set-Content C:\obs-cmake\obsConfig.cmake $shim
+          Set-Content C:\obs-cmake\libobsConfig.cmake $shim
+          Write-Host "libDir: $libDir"
+          Write-Host "frontendLib: $frontendLib"
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_PREFIX_PATH="C:\obs-cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static
+
+      - name: Build
+        run: cmake --build build --config RelWithDebInfo --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem build -Recurse -Filter "obs-twitch-ingest-benchmark.dll" |
+                   Select-Object -First 1
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item $dll.FullName dist\obs-twitch-ingest-benchmark.dll
+          Compress-Archive -Path dist\obs-twitch-ingest-benchmark.dll `
+                           -DestinationPath obs-twitch-ingest-benchmark-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obs-twitch-ingest-benchmark-windows
+          path: obs-twitch-ingest-benchmark-windows.zip
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Release — attach both zips when a tag is pushed
+  # ─────────────────────────────────────────────────────────────────────────────
+  release:
+    name: Release
+    needs: [build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: obs-twitch-ingest-benchmark-macos
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: obs-twitch-ingest-benchmark-windows
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            obs-twitch-ingest-benchmark-macos-arm64.zip
+            obs-twitch-ingest-benchmark-windows.zip
+          generate_release_notes: true

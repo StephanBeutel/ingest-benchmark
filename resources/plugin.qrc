@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- Add icons or locale files here as needed -->
+    </qresource>
+</RCC>
