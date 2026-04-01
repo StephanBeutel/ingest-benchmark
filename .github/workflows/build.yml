@@ -80,7 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Qt via aqtinstall (fast, no Qt account needed)
+      # Qt for building our plugin (not needed for the OBS mini-build)
       - name: Install Qt ${{ env.QT_VERSION }}
         uses: jurplel/install-qt-action@v4
         with:
@@ -88,107 +88,56 @@ jobs:
           arch: win64_msvc2022_64
           cache: true
 
-      # OBS source headers
-      - name: Clone OBS source headers
+      # libcurl for our plugin (via vcpkg)
+      - name: Install libcurl
+        shell: cmd
+        run: vcpkg install curl:x64-windows-static
+
+      # Clone OBS source — we build only libobs + obs-frontend-api.
+      # The OBS Windows release zip ships only .dll files (no import .lib);
+      # there is no pre-built SDK package. OBS auto-downloads its own deps
+      # (obs-deps) at CMake configure time via file(DOWNLOAD).
+      - name: Clone OBS source
+        shell: pwsh
         run: |
           git clone --depth 1 --branch "$env:OBS_VERSION" `
-            https://github.com/obsproject/obs-studio.git C:\obs-headers
-        shell: pwsh
+            https://github.com/obsproject/obs-studio.git C:\obs-src
 
-      # OBS Windows runtime zip — contains obs.lib, obs-frontend-api.lib in bin/64bit
-      - name: Download OBS Windows runtime
-        shell: pwsh
-        run: |
-          $url = "https://github.com/obsproject/obs-studio/releases/download/$env:OBS_VERSION/OBS-Studio-$env:OBS_VERSION-Windows-x64.zip"
-          Invoke-WebRequest -Uri $url -OutFile obs-windows.zip -TimeoutSec 300
-          Expand-Archive obs-windows.zip -DestinationPath C:\obs-windows
-
-      # Inspect the layout so we can point CMake at the right paths
-      - name: Inspect OBS layout
+      # Configure OBS with everything disabled except libobs + obs-frontend-api.
+      # OBS 32.x auto-fetches its deps (zlib, openssl, etc.) during configure.
+      # ENABLE_FRONTEND=OFF suppresses Qt6 requirement entirely.
+      - name: Configure OBS (libobs + obs-frontend-api only)
         shell: pwsh
         run: |
-          Write-Host "=== OBS Windows zip layout (top 40 files) ==="
-          Get-ChildItem C:\obs-windows -Recurse -File |
-            Select-Object -First 40 -ExpandProperty FullName
-          Write-Host "=== .lib files ==="
-          Get-ChildItem C:\obs-windows -Recurse -Filter "*.lib" |
-            Select-Object -ExpandProperty FullName
+          cmake -B C:\obs-build -S C:\obs-src `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_INSTALL_PREFIX="C:\obs-install" `
+            -DENABLE_FRONTEND=OFF `
+            -DENABLE_UI=OFF `
+            -DENABLE_SCRIPTING=OFF `
+            -DENABLE_PLUGINS=OFF `
+            -DENABLE_HEVC=OFF
 
-      # libcurl from vcpkg (already installed on windows-2022 runners)
-      - name: Install libcurl
-        run: vcpkg install curl:x64-windows-static
-        shell: cmd
-
-      # Generate a minimal CMake find-package config so CMake can locate
-      # OBS targets from the source headers + runtime zip
-      - name: Write OBS cmake shim
+      # Build only the two targets we need, then install headers + .lib files
+      - name: Build OBS libs
         shell: pwsh
         run: |
-          $libDir = (Get-ChildItem C:\obs-windows -Recurse -Filter "obs.lib" |
-                       Select-Object -First 1).DirectoryName
-          $frontendLib = (Get-ChildItem C:\obs-windows -Recurse -Filter "obs-frontend-api.lib" |
-                            Select-Object -First 1).FullName
-          # Compute paths before the here-string so no expressions are needed inside it.
-          # On Windows the .dll is not needed at link time (IMPORTED_IMPLIB is enough),
-          # so we reuse the .lib path as a dummy IMPORTED_LOCATION to satisfy CMake.
-          $obsLib      = "$libDir/obs.lib"
-          $feLib       = $frontendLib -replace '\\','/'
+          cmake --build C:\obs-build --config RelWithDebInfo `
+            --target obs obs-frontend-api --parallel
+          cmake --install C:\obs-build --config RelWithDebInfo `
+            --component Development
 
-          $shim = @"
-          cmake_minimum_required(VERSION 3.22)
-          if(NOT TARGET OBS::libobs)
-            add_library(OBS::libobs SHARED IMPORTED GLOBAL)
-            set_target_properties(OBS::libobs PROPERTIES
-              IMPORTED_CONFIGURATIONS "RelWithDebInfo;Release;Debug;MinSizeRel"
-              IMPORTED_IMPLIB_RELWITHDEBINFO  "$obsLib"
-              IMPORTED_LOCATION_RELWITHDEBINFO "$obsLib"
-              IMPORTED_IMPLIB_RELEASE          "$obsLib"
-              IMPORTED_LOCATION_RELEASE        "$obsLib"
-              IMPORTED_IMPLIB_DEBUG            "$obsLib"
-              IMPORTED_LOCATION_DEBUG          "$obsLib"
-              IMPORTED_IMPLIB_MINSIZEREL       "$obsLib"
-              IMPORTED_LOCATION_MINSIZEREL     "$obsLib"
-            )
-            target_include_directories(OBS::libobs INTERFACE
-              "C:/obs-headers"
-              "C:/obs-headers/libobs"
-            )
-          endif()
-          if(NOT TARGET OBS::obs-frontend-api)
-            add_library(OBS::obs-frontend-api SHARED IMPORTED GLOBAL)
-            set_target_properties(OBS::obs-frontend-api PROPERTIES
-              IMPORTED_CONFIGURATIONS "RelWithDebInfo;Release;Debug;MinSizeRel"
-              IMPORTED_IMPLIB_RELWITHDEBINFO  "$feLib"
-              IMPORTED_LOCATION_RELWITHDEBINFO "$feLib"
-              IMPORTED_IMPLIB_RELEASE          "$feLib"
-              IMPORTED_LOCATION_RELEASE        "$feLib"
-              IMPORTED_IMPLIB_DEBUG            "$feLib"
-              IMPORTED_LOCATION_DEBUG          "$feLib"
-              IMPORTED_IMPLIB_MINSIZEREL       "$feLib"
-              IMPORTED_LOCATION_MINSIZEREL     "$feLib"
-            )
-            target_include_directories(OBS::obs-frontend-api INTERFACE
-              "C:/obs-headers/frontend/api"
-            )
-            target_link_libraries(OBS::obs-frontend-api INTERFACE OBS::libobs)
-          endif()
-          "@
-
-          New-Item -ItemType Directory -Force C:\obs-cmake | Out-Null
-          Set-Content C:\obs-cmake\obsConfig.cmake $shim
-          Set-Content C:\obs-cmake\libobsConfig.cmake $shim
-          Write-Host "libDir: $libDir"
-          Write-Host "frontendLib: $frontendLib"
-
-      - name: Configure
+      # Configure our plugin against the freshly installed OBS SDK
+      - name: Configure plugin
         shell: pwsh
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_PREFIX_PATH="C:\obs-cmake" `
+            -DCMAKE_PREFIX_PATH="C:\obs-install" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DQt6_DIR="$env:Qt6_DIR"
 
-      - name: Build
+      - name: Build plugin
         run: cmake --build build --config RelWithDebInfo --parallel
 
       - name: Package
