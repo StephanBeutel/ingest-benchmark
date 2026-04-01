@@ -132,12 +132,19 @@ jobs:
           cmake --install C:\obs-build --config RelWithDebInfo `
             --component Development
 
-      # Configure our plugin against the freshly installed OBS SDK
+      # Configure our plugin against the freshly installed OBS SDK.
+      # libobsConfig.cmake requires SIMDe from obs-deps, which OBS downloaded
+      # into C:\obs-src\.deps\ during configure. Find that directory and add it
+      # to CMAKE_PREFIX_PATH so FindSIMDe.cmake can locate the headers.
       - name: Configure plugin
         shell: pwsh
         run: |
+          $obsDeps = Get-ChildItem "C:\obs-src\.deps" -Directory |
+                       Where-Object { $_.Name -like "obs-deps-*" } |
+                       Select-Object -First 1 -ExpandProperty FullName
+          Write-Host "obs-deps path: $obsDeps"
           cmake -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_PREFIX_PATH="C:\obs-install" `
+            -DCMAKE_PREFIX_PATH="C:\obs-install;$obsDeps" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static `
             -DQt6_DIR="$env:Qt6_DIR"
