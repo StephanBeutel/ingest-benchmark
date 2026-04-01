@@ -88,10 +88,22 @@ jobs:
           arch: win64_msvc2022_64
           cache: true
 
-      # libcurl for our plugin (via vcpkg)
+      # libcurl for our plugin (via vcpkg, release-only to avoid multi-config issues)
       - name: Install libcurl
-        shell: cmd
-        run: vcpkg install curl:x64-windows-static
+        shell: pwsh
+        run: |
+          # Install a release-only custom triplet so vcpkg doesn't generate
+          # Debug/MinSizeRel/Release imported-target entries that have no .lib.
+          $tripletFile = "$env:VCPKG_INSTALLATION_ROOT\triplets\community\x64-windows-static-release.cmake"
+          if (-not (Test-Path $tripletFile)) {
+            @"
+set(VCPKG_TARGET_ARCHITECTURE x64)
+set(VCPKG_CRT_LINKAGE static)
+set(VCPKG_LIBRARY_LINKAGE static)
+set(VCPKG_BUILD_TYPE release)
+"@ | Set-Content $tripletFile
+          }
+          vcpkg install "curl:x64-windows-static-release"
 
       # Clone OBS source — we build only libobs + obs-frontend-api.
       # The OBS Windows release zip ships only .dll files (no import .lib);
@@ -146,12 +158,11 @@ jobs:
           cmake -B build -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_PREFIX_PATH="C:\obs-install;$obsDeps" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-release `
             -DQt6_DIR="$env:Qt6_DIR" `
             "-DCMAKE_MAP_IMPORTED_CONFIG_DEBUG=RelWithDebInfo" `
             "-DCMAKE_MAP_IMPORTED_CONFIG_RELEASE=RelWithDebInfo" `
-            "-DCMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL=RelWithDebInfo" `
-            -DVCPKG_BUILD_TYPE=release
+            "-DCMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL=RelWithDebInfo"
 
       - name: Build plugin
         run: cmake --build build --config RelWithDebInfo --parallel
