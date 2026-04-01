@@ -82,6 +82,8 @@ if(NOT APPLE)
     find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
 endif()
 
+find_package(CURL REQUIRED)
+
 # ────────────────────────────────────────────────────────────────────────────────
 # Source files
 # ────────────────────────────────────────────────────────────────────────────────
@@ -133,7 +135,7 @@ target_link_libraries(${PROJECT_NAME}
         # libcurl: system library on macOS (TLS via SecureTransport),
         # used for the Twitch ingest list HTTPS fetch instead of Qt network
         # (OBS does not ship a Qt TLS backend plugin).
-        curl
+        CURL::libcurl
 )
 
 # ────────────────────────────────────────────────────────────────────────────────
