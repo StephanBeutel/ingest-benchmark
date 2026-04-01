@@ -46,20 +46,21 @@ endif()
 #               -DOBS_SOURCE_DIR=/tmp/obs-headers
 # ────────────────────────────────────────────────────────────────────────────────
 
-# Add our cmake/ directory to the module path so FindLibObs.cmake is found
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 # Check if targets already exist (in-tree build or prior find_package success)
 if(NOT TARGET OBS::libobs)
-    # Try standard find_package first (works with OBS cmake install)
+    # Try standard find_package first (works with OBS cmake install).
+    # Do NOT put cmake/ on CMAKE_MODULE_PATH before this call — our
+    # FindLibObs.cmake is macOS-only and would be picked up by find_package on
+    # every platform, including Windows where it immediately fatal-errors.
     find_package(libobs QUIET)
     find_package(obs-frontend-api QUIET)
 endif()
 
 if(NOT TARGET OBS::libobs)
-    # macOS app-bundle path: use our custom finder
+    # macOS app-bundle path: use our custom finder via include() so it is
+    # never accidentally triggered by find_package on other platforms.
     if(APPLE AND (DEFINED OBS_APP OR EXISTS "/Applications/OBS.app"))
-        include(FindLibObs)
+        include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibObs.cmake")
     elseif(DEFINED OBS_ROOT)
         list(APPEND CMAKE_PREFIX_PATH "${OBS_ROOT}")
         find_package(libobs REQUIRED)
