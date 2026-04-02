@@ -29,11 +29,12 @@ static void onFrontendEvent(enum obs_frontend_event event, void * /*data*/)
             g_dock->installStreamButtonFilter();
 
     } else if (event == OBS_FRONTEND_EVENT_STREAMING_STARTING) {
-        // Fired for ALL stream starts including WebSocket/API-triggered ones.
-        // Invoke queued so the handler runs after OBS's streaming setup returns.
+        // Fired AFTER SetupStreaming() (encoders initialised, OAuth key injected)
+        // but BEFORE obs_output_start().  We call directly (not queued) so our
+        // server-apply runs synchronously before OBS proceeds to start the output.
         if (g_dock)
             QMetaObject::invokeMethod(g_dock,
-                "onStreamingStarting", Qt::QueuedConnection);
+                "onStreamingStarting", Qt::DirectConnection);
 
     } else if (event == OBS_FRONTEND_EVENT_EXIT) {
         if (g_dock) {

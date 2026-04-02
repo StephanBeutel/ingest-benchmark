@@ -21,6 +21,8 @@
 #include <QMetaObject>
 #include <QWidget>
 
+#include <ctime>
+
 namespace twitch_bench {
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,9 +66,22 @@ void BenchmarkDock::shutdown()
 
 // ─────────────────────────────────────────────────────────────────────────────
 // onStreamingStarting — called via QueuedConnection from the
-// OBS_FRONTEND_EVENT_STREAMING_STARTING handler.  By the time it runs OBS
-// has already started the stream output, so we stop it, run the benchmark,
-// and let onBenchmarkFinished restart it with the best server applied.
+// OBS_FRONTEND_EVENT_STREAMING_STARTING handler.
+//
+// By the time this runs, OBS has completed SetupStreaming() (encoders
+// initialised, OnStreamConfig() already injected the OAuth stream key) but
+// has NOT yet called obs_output_start().  We must NOT call
+// obs_frontend_streaming_stop() here: doing so leaves the encoder in a
+// half-initialised state that causes the subsequent restart to fail with
+// "cannot apply a new video_t object after encoder has been initialised".
+//
+// Strategy:
+//   • If we have fresh cached results (within cacheTtlSeconds), apply the
+//     best server immediately and let the current stream start proceed.
+//     obs_service_update() is safe here because obs_output_start() hasn't
+//     been called yet.
+//   • Otherwise let the stream start unchanged.  We cannot safely
+//     benchmark-and-restart at this point in the start sequence.
 // ─────────────────────────────────────────────────────────────────────────────
 
 void BenchmarkDock::onStreamingStarting()
@@ -74,7 +89,8 @@ void BenchmarkDock::onStreamingStarting()
     if (!m_chkAutoApply->isChecked())
         return;
 
-    // Suppress re-entry: this is the stream start WE triggered after benchmarking.
+    // Suppress re-entry: this is the stream start WE triggered after
+    // benchmarking via the button path.
     if (m_benchmarkTriggered) {
         m_benchmarkTriggered = false;
         return;
@@ -83,15 +99,29 @@ void BenchmarkDock::onStreamingStarting()
     if (m_engine.isRunning())
         return;
 
-    // Stop the stream that just started, then benchmark and restart.
-    TLOG_INFO("onStreamingStarting: intercepting WebSocket/API stream start");
-    QMetaObject::invokeMethod(this, []() {
-        obs_frontend_streaming_stop();
-    }, Qt::QueuedConnection);
+    // Check whether we have a fresh cached result we can apply right now.
+    auto &cfg = PluginSettings::instance();
+    int ttl = cfg.cacheTtlSeconds();
+    std::time_t age = std::time(nullptr) - m_engine.lastRunTime();
 
-    // Call startBenchmarkForStream() directly — bypass the isStreaming() guard
-    // in onBenchmarkAndStart() since we just queued a stop (not processed yet).
-    startBenchmarkForStream();
+    if (ttl > 0 && m_engine.lastRunTime() > 0 && age <= ttl && !m_lastResults.isEmpty()) {
+        // Fresh cache — apply immediately so this stream start uses the best server.
+        TLOG_INFO("onStreamingStarting: applying cached result (age=%llds)", (long long)age);
+        QString url  = bestServerUrl();
+        QString name = bestServerName();
+        if (!url.isEmpty()) {
+            int placeholder = url.indexOf(QStringLiteral("/{stream_key}"));
+            if (placeholder == -1) placeholder = url.indexOf(QStringLiteral("{stream_key}"));
+            if (placeholder != -1) url = url.left(placeholder);
+            applyServer(url, name);
+        }
+    } else {
+        // No fresh cache.  Let the stream start on whatever server OBS has.
+        // The user can run a manual benchmark afterwards, or the next
+        // auto-benchmark via the button path will pick up fresh results.
+        TLOG_INFO("onStreamingStarting: no fresh cached results (age=%llds ttl=%ds) — letting stream start unchanged",
+                  (long long)age, ttl);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
