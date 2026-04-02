@@ -57,14 +57,11 @@ jobs:
         run: |
           mkdir -p dist
           cp -R build/obs-twitch-ingest-benchmark.plugin dist/
-          cd dist
-          zip -r ../obs-twitch-ingest-benchmark-macos-arm64.zip \
-            obs-twitch-ingest-benchmark.plugin
 
       - uses: actions/upload-artifact@v4
         with:
           name: obs-twitch-ingest-benchmark-macos
-          path: obs-twitch-ingest-benchmark-macos-arm64.zip
+          path: dist/obs-twitch-ingest-benchmark.plugin
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Windows (x64)
@@ -167,13 +164,11 @@ jobs:
                    Select-Object -First 1
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item $dll.FullName dist\obs-twitch-ingest-benchmark.dll
-          Compress-Archive -Path dist\obs-twitch-ingest-benchmark.dll `
-                           -DestinationPath obs-twitch-ingest-benchmark-windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: obs-twitch-ingest-benchmark-windows
-          path: obs-twitch-ingest-benchmark-windows.zip
+          path: dist\obs-twitch-ingest-benchmark.dll
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Release — attach both zips when a tag is pushed
@@ -190,10 +185,19 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: obs-twitch-ingest-benchmark-macos
+          path: macos-artifact
 
       - uses: actions/download-artifact@v4
         with:
           name: obs-twitch-ingest-benchmark-windows
+          path: windows-artifact
+
+      - name: Create release zips
+        run: |
+          cd macos-artifact
+          zip -r ../obs-twitch-ingest-benchmark-macos-arm64.zip obs-twitch-ingest-benchmark.plugin
+          cd ../windows-artifact
+          zip ../obs-twitch-ingest-benchmark-windows.zip obs-twitch-ingest-benchmark.dll
 
       - uses: softprops/action-gh-release@v2
         with:
