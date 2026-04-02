@@ -21,9 +21,9 @@ PluginSettings &PluginSettings::instance()
 
 void PluginSettings::load()
 {
-    config_t *cfg = obs_frontend_get_app_config();
+    config_t *cfg = obs_frontend_get_global_config();
     if (!cfg) {
-        TLOG_WARN("load(): app config not available, using defaults");
+        TLOG_WARN("load(): global config not available, using defaults");
         return;
     }
 
@@ -49,7 +49,7 @@ void PluginSettings::load()
 
 void PluginSettings::save() const
 {
-    config_t *cfg = obs_frontend_get_app_config();
+    config_t *cfg = obs_frontend_get_global_config();
     if (!cfg) return;
 
     config_set_bool(cfg, SECTION, "AutoBenchmark",   m_autoBenchmark);
