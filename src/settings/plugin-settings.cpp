@@ -59,7 +59,7 @@ void PluginSettings::save() const
     config_set_int (cfg, SECTION, "ProbeRounds",     m_probeRounds);
     config_set_int (cfg, SECTION, "ProbeTimeoutMs",  m_probeTimeoutMs);
 
-    config_save_safe(cfg, "tmp", nullptr);
+    config_save(cfg);
 }
 
 void PluginSettings::setAutoBenchmarkBeforeStream(bool v)
