@@ -75,6 +75,7 @@ private:
     BenchmarkEngine         m_engine;
     QList<ServerResult>     m_lastResults;
     bool                    m_pendingStreamStart  = false;
+    bool                    m_pendingApplyLive    = false; // apply best server to already-running stream
     bool                    m_benchmarkTriggered  = false; // suppress re-intercept after our own start
     QObject                *m_streamButton        = nullptr;
 };

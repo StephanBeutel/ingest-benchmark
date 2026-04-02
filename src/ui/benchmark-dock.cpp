@@ -65,23 +65,22 @@ void BenchmarkDock::shutdown()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// onStreamingStarting — called via QueuedConnection from the
+// onStreamingStarting — called via DirectConnection from the
 // OBS_FRONTEND_EVENT_STREAMING_STARTING handler.
 //
 // By the time this runs, OBS has completed SetupStreaming() (encoders
 // initialised, OnStreamConfig() already injected the OAuth stream key) but
 // has NOT yet called obs_output_start().  We must NOT call
 // obs_frontend_streaming_stop() here: doing so leaves the encoder in a
-// half-initialised state that causes the subsequent restart to fail with
-// "cannot apply a new video_t object after encoder has been initialised".
+// broken state.
 //
 // Strategy:
-//   • If we have fresh cached results (within cacheTtlSeconds), apply the
-//     best server immediately and let the current stream start proceed.
-//     obs_service_update() is safe here because obs_output_start() hasn't
-//     been called yet.
-//   • Otherwise let the stream start unchanged.  We cannot safely
-//     benchmark-and-restart at this point in the start sequence.
+//   • Fresh cache → apply best server immediately before obs_output_start().
+//   • Stale/no cache → let this stream start on whatever server OBS has,
+//     then run a background benchmark; when it finishes, apply the best
+//     server to the live stream (obs_service_update takes effect on the
+//     next keyframe reconnect or can be picked up mid-stream by some
+//     implementations, but most importantly it's stored for the next start).
 // ─────────────────────────────────────────────────────────────────────────────
 
 void BenchmarkDock::onStreamingStarting()
@@ -99,13 +98,14 @@ void BenchmarkDock::onStreamingStarting()
     if (m_engine.isRunning())
         return;
 
-    // Check whether we have a fresh cached result we can apply right now.
     auto &cfg = PluginSettings::instance();
     int ttl = cfg.cacheTtlSeconds();
     std::time_t age = std::time(nullptr) - m_engine.lastRunTime();
+    bool freshCache = (ttl > 0 && m_engine.lastRunTime() > 0
+                       && age <= ttl && !m_lastResults.isEmpty());
 
-    if (ttl > 0 && m_engine.lastRunTime() > 0 && age <= ttl && !m_lastResults.isEmpty()) {
-        // Fresh cache — apply immediately so this stream start uses the best server.
+    if (freshCache) {
+        // Apply immediately — obs_output_start() hasn't been called yet.
         TLOG_INFO("onStreamingStarting: applying cached result (age=%llds)", (long long)age);
         QString url  = bestServerUrl();
         QString name = bestServerName();
@@ -116,11 +116,17 @@ void BenchmarkDock::onStreamingStarting()
             applyServer(url, name);
         }
     } else {
-        // No fresh cache.  Let the stream start on whatever server OBS has.
-        // The user can run a manual benchmark afterwards, or the next
-        // auto-benchmark via the button path will pick up fresh results.
-        TLOG_INFO("onStreamingStarting: no fresh cached results (age=%llds ttl=%ds) — letting stream start unchanged",
+        // No fresh cache — stream starts on current server; run benchmark
+        // in background and apply the result to the live stream when done.
+        TLOG_INFO("onStreamingStarting: no fresh cache (age=%llds ttl=%ds) — running background benchmark",
                   (long long)age, ttl);
+        m_pendingApplyLive = true;
+        m_lastResults.clear();
+        m_btnApply->setEnabled(false);
+        m_progress->setValue(0);
+        setControlsEnabled(false);
+        appendLog(QStringLiteral("Running background benchmark while streaming…"));
+        m_engine.startBenchmark(cfg.euOnlyFilter(), cfg.probeRounds(), cfg.probeTimeoutMs());
     }
 }
 
@@ -426,11 +432,23 @@ void BenchmarkDock::onBenchmarkFinished(QList<twitch_bench::ServerResult> result
             obs_frontend_streaming_start();
         }, Qt::QueuedConnection);
     }
+
+    if (m_pendingApplyLive) {
+        m_pendingApplyLive = false;
+
+        QString url  = bestServerUrl();
+        QString name = bestServerName();
+        if (!url.isEmpty()) {
+            applyServer(url, name);
+            appendLog(QStringLiteral("Best server applied to live stream — will take effect on next stream start."));
+        }
+    }
 }
 
 void BenchmarkDock::onBenchmarkError(const QString &message)
 {
     m_pendingStreamStart = false;
+    m_pendingApplyLive   = false;
     setControlsEnabled(true);
     appendLog("ERROR: " + message);
     m_statusLabel->setText("Error: " + message);
