@@ -82,6 +82,12 @@ bool OBSIntegration::applyStreamServer(const std::string &rtmpUrl)
     obs_data_set_string(settings, "server", rtmpUrl.c_str());
     obs_data_release(settings);
 
+    // Persist the updated service settings so OBS saves them cleanly on
+    // shutdown. Without this, OBS's shutdown path sees the in-memory settings
+    // as dirty and may not flush them correctly, causing the "improper
+    // shutdown" warning.
+    obs_frontend_save_streaming_service();
+
     TLOG_INFO("applyStreamServer: applied '%s'", rtmpUrl.c_str());
     return true;
 }
