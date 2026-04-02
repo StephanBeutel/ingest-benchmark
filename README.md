@@ -276,4 +276,6 @@ Each component is normalised to `[0, 1]` across all servers in the run. The serv
 
 ## License
 
-MIT
+Copyright (c) 2026 Stephan Beutel. All rights reserved.
+
+This software is proprietary. Unauthorized copying, distribution, or modification is prohibited. See [LICENSE](LICENSE) for details.
