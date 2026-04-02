@@ -53,7 +53,13 @@ Download the latest release for your platform from the [Releases](../../releases
    ```
    ~/Library/Application Support/obs-studio/plugins/
    ```
-4. Restart OBS
+4. Remove the quarantine flag that macOS places on files downloaded from the internet:
+   ```sh
+   xattr -cr ~/Library/Application\ Support/obs-studio/plugins/obs-twitch-ingest-benchmark.plugin
+   ```
+5. Restart OBS
+
+> **Why is this needed?** The plugin is not code-signed with an Apple Developer ID certificate. macOS Gatekeeper blocks unsigned binaries downloaded from the internet with the error *"is damaged and can't be opened"*. The `xattr -cr` command removes the quarantine attribute and allows OBS to load the plugin normally. This is safe to do for software you trust.
 
 ### Windows (x64)
 
