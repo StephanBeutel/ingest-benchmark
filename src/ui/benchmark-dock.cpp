@@ -89,8 +89,12 @@ void BenchmarkDock::onStreamingStarting()
         obs_frontend_streaming_stop();
     }, Qt::QueuedConnection);
 
-    onBenchmarkAndStart();
+    // Call startBenchmarkForStream() directly — bypass the isStreaming() guard
+    // in onBenchmarkAndStart() since we just queued a stop (not processed yet).
+    startBenchmarkForStream();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stream button filter
@@ -279,6 +283,12 @@ void BenchmarkDock::onBenchmarkAndStart()
             QStringLiteral("OBS is already streaming."));
         return;
     }
+    startBenchmarkForStream();
+}
+
+void BenchmarkDock::startBenchmarkForStream()
+{
+    if (m_engine.isRunning()) return;
 
     m_pendingStreamStart = true;
     m_lastResults.clear();

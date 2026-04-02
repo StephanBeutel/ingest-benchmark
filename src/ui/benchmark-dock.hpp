@@ -55,6 +55,7 @@ private:
     void setControlsEnabled(bool enabled);
     void appendLog(const QString &msg);
     void applyServer(const QString &url, const QString &name);
+    void startBenchmarkForStream(); // shared by button and WebSocket intercept
 
     QString bestServerUrl() const;
     QString bestServerName() const;
