@@ -61,7 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: obs-twitch-ingest-benchmark-macos
-          path: dist/obs-twitch-ingest-benchmark.plugin
+          path: dist/
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Windows (x64)
