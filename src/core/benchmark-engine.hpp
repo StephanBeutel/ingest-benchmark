@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QThread>
 #include <vector>
-#include <atomic>
 #include <ctime>
 
 namespace twitch_bench {
@@ -37,7 +36,6 @@ private:
     bool m_euOnly     = false;
     int  m_rounds     = 3;
     int  m_timeoutMs  = 3000;
-    std::atomic<bool> m_abort{false};
 
     ServerResult probeOne(const IngestServer &server);
 };

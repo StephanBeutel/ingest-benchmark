@@ -48,6 +48,21 @@ BenchmarkDock::BenchmarkDock(QWidget *parent)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Shutdown — cancel any running benchmark and join the worker thread.
+// Must be called before OBS tears down Qt (OBS_FRONTEND_EVENT_EXIT).
+// ─────────────────────────────────────────────────────────────────────────────
+
+void BenchmarkDock::shutdown()
+{
+    if (m_streamButton) {
+        m_streamButton->removeEventFilter(this);
+        m_streamButton = nullptr;
+    }
+    m_engine.cancel();
+    TLOG_INFO("BenchmarkDock::shutdown() complete");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Stream button filter
 // ─────────────────────────────────────────────────────────────────────────────
 

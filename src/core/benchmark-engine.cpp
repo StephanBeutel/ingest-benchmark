@@ -125,7 +125,7 @@ void BenchmarkWorker::run()
     results.reserve(static_cast<int>(servers.size()));
 
     for (int i = 0; i < static_cast<int>(servers.size()); ++i) {
-        if (m_abort) {
+        if (QThread::currentThread()->isInterruptionRequested()) {
             emit error(QStringLiteral("Benchmark cancelled"));
             return;
         }
@@ -207,6 +207,7 @@ void BenchmarkEngine::cancel()
     if (m_thread && m_thread->isRunning()) {
         m_thread->requestInterruption();
         m_thread->quit();
+        m_thread->wait(5000);
     }
 }
 

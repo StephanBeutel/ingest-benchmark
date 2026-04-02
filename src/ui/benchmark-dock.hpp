@@ -31,6 +31,7 @@ public:
     // clicks when auto-benchmark is enabled. Called once after the dock
     // is registered and OBS's main window is fully initialised.
     void installStreamButtonFilter();
+    void shutdown();  // Cancel benchmark, join worker thread — call before OBS exits
 
     // QObject event filter — intercepts stream button clicks.
     bool eventFilter(QObject *watched, QEvent *event) override;
