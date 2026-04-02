@@ -159,11 +159,6 @@ BenchmarkEngine::BenchmarkEngine(QObject *parent)
 BenchmarkEngine::~BenchmarkEngine()
 {
     cancel();
-    if (m_thread) {
-        m_thread->quit();
-        m_thread->wait(5000);
-        delete m_thread;
-    }
 }
 
 bool BenchmarkEngine::startBenchmark(bool euOnly, int rounds, int timeoutMs)
@@ -171,6 +166,14 @@ bool BenchmarkEngine::startBenchmark(bool euOnly, int rounds, int timeoutMs)
     if (m_running) {
         TLOG_WARN("startBenchmark: already running");
         return false;
+    }
+
+    // Clean up previous thread if it finished normally
+    if (m_thread) {
+        m_thread->quit();
+        m_thread->wait();
+        delete m_thread;
+        m_thread = nullptr;
     }
 
     m_running = true;
@@ -194,9 +197,9 @@ bool BenchmarkEngine::startBenchmark(bool euOnly, int rounds, int timeoutMs)
     connect(worker,   &BenchmarkWorker::error,
             this,     &BenchmarkEngine::onWorkerError);
 
-    // Cleanup when thread finishes
-    connect(m_thread, &QThread::finished, worker,   &QObject::deleteLater);
-    connect(m_thread, &QThread::finished, m_thread, &QObject::deleteLater);
+    // Cleanup: worker deletes itself when thread finishes.
+    // Thread is quit+deleted in cancel() or ~BenchmarkEngine().
+    connect(m_thread, &QThread::finished, worker, &QObject::deleteLater);
 
     m_thread->start();
     return true;
@@ -204,10 +207,13 @@ bool BenchmarkEngine::startBenchmark(bool euOnly, int rounds, int timeoutMs)
 
 void BenchmarkEngine::cancel()
 {
-    if (m_thread && m_thread->isRunning()) {
+    if (m_thread) {
+        m_running = false;
         m_thread->requestInterruption();
         m_thread->quit();
         m_thread->wait(5000);
+        delete m_thread;
+        m_thread = nullptr;
     }
 }
 
@@ -216,14 +222,14 @@ void BenchmarkEngine::onWorkerFinished(QList<twitch_bench::ServerResult> results
     m_lastResults.assign(results.begin(), results.end());
     m_lastRunTime = std::time(nullptr);
     m_running     = false;
-    m_thread      = nullptr;
+    // Do not delete m_thread here — cancel() / destructor owns the lifetime.
     emit benchmarkFinished(results);
 }
 
 void BenchmarkEngine::onWorkerError(const QString &message)
 {
     m_running = false;
-    m_thread  = nullptr;
+    // Do not delete m_thread here — cancel() / destructor owns the lifetime.
     emit benchmarkError(message);
 }
 
