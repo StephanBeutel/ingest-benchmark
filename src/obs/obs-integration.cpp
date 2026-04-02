@@ -80,12 +80,18 @@ bool OBSIntegration::applyStreamServer(const std::string &rtmpUrl)
     }
 
     obs_data_set_string(settings, "server", rtmpUrl.c_str());
+    obs_service_update(svc, settings);
     obs_data_release(settings);
 
-    // Persist the updated service settings so OBS saves them cleanly on
-    // shutdown. Without this, OBS's shutdown path sees the in-memory settings
-    // as dirty and may not flush them correctly, causing the "improper
-    // shutdown" warning.
+    // obs_service_update() pushes the modified obs_data back into the live
+    // service object. obs_service_get_settings() returns a copy, so without
+    // this call the "server" change would never take effect.
+    //
+    // obs_frontend_save_streaming_service() then persists the change to
+    // service.json so OBS shuts down cleanly. OAuth tokens are stored
+    // separately in the OBS config INI (not in service.json) so this call
+    // is safe regardless of whether the user is authenticated via OAuth or
+    // a manual stream key.
     obs_frontend_save_streaming_service();
 
     TLOG_INFO("applyStreamServer: applied '%s'", rtmpUrl.c_str());
