@@ -23,8 +23,7 @@ static twitch_bench::BenchmarkDock *g_dock = nullptr;
 static void onFrontendEvent(enum obs_frontend_event event, void * /*data*/)
 {
     if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-        twitch_bench::PluginSettings::instance().load();
-        TLOG_INFO("Frontend finished loading — settings applied");
+        TLOG_INFO("Frontend finished loading");
 
         // Install the event filter on OBS's stream button now that the
         // main window is fully constructed.
@@ -42,7 +41,8 @@ bool obs_module_load()
 
 void obs_module_post_load()
 {
-    TLOG_INFO("Post-load: creating dock widget");
+    TLOG_INFO("Post-load: loading settings and creating dock widget");
+    twitch_bench::PluginSettings::instance().load();
     g_dock = new twitch_bench::BenchmarkDock();
     obs_frontend_add_dock_by_id(
         "twitch-ingest-benchmark-dock",
