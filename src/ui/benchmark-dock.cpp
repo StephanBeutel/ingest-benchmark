@@ -63,6 +63,36 @@ void BenchmarkDock::shutdown()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// onStreamingStarting — called via QueuedConnection from the
+// OBS_FRONTEND_EVENT_STREAMING_STARTING handler.  By the time it runs OBS
+// has already started the stream output, so we stop it, run the benchmark,
+// and let onBenchmarkFinished restart it with the best server applied.
+// ─────────────────────────────────────────────────────────────────────────────
+
+void BenchmarkDock::onStreamingStarting()
+{
+    if (!m_chkAutoApply->isChecked())
+        return;
+
+    // Suppress re-entry: this is the stream start WE triggered after benchmarking.
+    if (m_benchmarkTriggered) {
+        m_benchmarkTriggered = false;
+        return;
+    }
+
+    if (m_engine.isRunning())
+        return;
+
+    // Stop the stream that just started, then benchmark and restart.
+    TLOG_INFO("onStreamingStarting: intercepting WebSocket/API stream start");
+    QMetaObject::invokeMethod(this, []() {
+        obs_frontend_streaming_stop();
+    }, Qt::QueuedConnection);
+
+    onBenchmarkAndStart();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Stream button filter
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -349,7 +379,9 @@ void BenchmarkDock::onBenchmarkFinished(QList<twitch_bench::ServerResult> result
             applyServer(url, name);
 
         // Queue the stream start so we return to the event loop first.
+        // Set the flag so onStreamingStarting() knows not to intercept this.
         appendLog(QStringLiteral("Starting stream…"));
+        m_benchmarkTriggered = true;
         QMetaObject::invokeMethod(this, []() {
             obs_frontend_streaming_start();
         }, Qt::QueuedConnection);

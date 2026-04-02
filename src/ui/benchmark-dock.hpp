@@ -32,6 +32,7 @@ public:
     // is registered and OBS's main window is fully initialised.
     void installStreamButtonFilter();
     void shutdown();  // Cancel benchmark, join worker thread — call before OBS exits
+    void onStreamingStarting(); // Called (queued) when OBS starts streaming via any path
 
     // QObject event filter — intercepts stream button clicks.
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -72,8 +73,9 @@ private:
     // ── State ─────────────────────────────────────────────────────────────────
     BenchmarkEngine         m_engine;
     QList<ServerResult>     m_lastResults;
-    bool                    m_pendingStreamStart = false;
-    QObject                *m_streamButton       = nullptr; // OBS main window stream button
+    bool                    m_pendingStreamStart  = false;
+    bool                    m_benchmarkTriggered  = false; // suppress re-intercept after our own start
+    QObject                *m_streamButton        = nullptr;
 };
 
 } // namespace twitch_bench
