@@ -58,9 +58,18 @@ jobs:
           mkdir -p dist
           cp -R build/ingest-benchmark-for-twitch.plugin dist/
 
+      - name: Set artifact name
+        id: artifact
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "name=ingest-benchmark-for-twitch-${GITHUB_REF_NAME}-macos" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=ingest-benchmark-for-twitch-macos" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ingest-benchmark-for-twitch-macos
+          name: ${{ steps.artifact.outputs.name }}
           path: dist/
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -165,9 +174,19 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item $dll.FullName dist\ingest-benchmark-for-twitch.dll
 
+      - name: Set artifact name
+        id: artifact
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "name=ingest-benchmark-for-twitch-${GITHUB_REF_NAME}-windows" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=ingest-benchmark-for-twitch-windows" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ingest-benchmark-for-twitch-windows
+          name: ${{ steps.artifact.outputs.name }}
           path: dist\ingest-benchmark-for-twitch.dll
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -184,24 +203,24 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ingest-benchmark-for-twitch-macos
+          name: ingest-benchmark-for-twitch-${{ github.ref_name }}-macos
           path: macos-artifact
 
       - uses: actions/download-artifact@v4
         with:
-          name: ingest-benchmark-for-twitch-windows
+          name: ingest-benchmark-for-twitch-${{ github.ref_name }}-windows
           path: windows-artifact
 
       - name: Create release zips
         run: |
           cd macos-artifact
-          zip -r ../ingest-benchmark-for-twitch-macos-arm64.zip ingest-benchmark-for-twitch.plugin
+          zip -r ../ingest-benchmark-for-twitch-${{ github.ref_name }}-macos-arm64.zip ingest-benchmark-for-twitch.plugin
           cd ../windows-artifact
-          zip ../ingest-benchmark-for-twitch-windows.zip ingest-benchmark-for-twitch.dll
+          zip ../ingest-benchmark-for-twitch-${{ github.ref_name }}-windows.zip ingest-benchmark-for-twitch.dll
 
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            ingest-benchmark-for-twitch-macos-arm64.zip
-            ingest-benchmark-for-twitch-windows.zip
+            ingest-benchmark-for-twitch-${{ github.ref_name }}-macos-arm64.zip
+            ingest-benchmark-for-twitch-${{ github.ref_name }}-windows.zip
           generate_release_notes: true
