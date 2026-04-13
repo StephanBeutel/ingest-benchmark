@@ -2,6 +2,8 @@
 
 An OBS Studio plugin that benchmarks all Twitch ingest servers and automatically applies the fastest one before you start streaming.
 
+![Twitch Ingest Benchmark dock](doc/ingest-benchmark-for-twitch-dock.png)
+
 ## Features
 
 - Fetches the live Twitch ingest server list from the Twitch API
@@ -60,6 +62,10 @@ Download the latest release for your platform from the [Releases](../../releases
 5. Restart OBS
 
 > **Why is this needed?** The plugin is not code-signed with an Apple Developer ID certificate. macOS Gatekeeper blocks unsigned binaries downloaded from the internet with the error *"is damaged and can't be opened"*. The `xattr -cr` command removes the quarantine attribute and allows OBS to load the plugin normally. This is safe to do for software you trust.
+>
+> | macOS Gatekeeper error | OBS plugin load failure |
+> |---|---|
+> | ![Gatekeeper error](doc/ingest-benchmark-for-twitch.error1.png) | ![OBS plugin failed to load](doc/ingest-benchmark-for-twitch.error2.png) |
 
 ### Windows (x64)
 
