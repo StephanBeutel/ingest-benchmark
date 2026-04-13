@@ -49,7 +49,7 @@ Download the latest release for your platform from the [Releases](../../releases
 
 ### macOS (Apple Silicon)
 
-1. Download `ingest-benchmark-for-twitch-macos-arm64.zip`
+1. Download `ingest-benchmark-for-twitch-vx.x.x-macos-arm64.zip`
 2. Unzip — you get `ingest-benchmark-for-twitch.plugin`
 3. Copy the `.plugin` bundle to:
    ```
@@ -69,7 +69,7 @@ Download the latest release for your platform from the [Releases](../../releases
 
 ### Windows (x64)
 
-1. Download `ingest-benchmark-for-twitch-windows.zip`
+1. Download `ingest-benchmark-for-twitch-vx.x.x-windows.zip`
 2. Unzip — you get `ingest-benchmark-for-twitch.dll`
 3. Copy the `.dll` to your OBS plugins folder:
    ```
