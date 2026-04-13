@@ -1,4 +1,4 @@
-# obs-twitch-ingest-benchmark
+# ingest-benchmark-for-twitch
 
 An OBS Studio plugin that benchmarks all Twitch ingest servers and automatically applies the fastest one before you start streaming.
 
@@ -47,15 +47,15 @@ Download the latest release for your platform from the [Releases](../../releases
 
 ### macOS (Apple Silicon)
 
-1. Download `obs-twitch-ingest-benchmark-macos-arm64.zip`
-2. Unzip — you get `obs-twitch-ingest-benchmark.plugin`
+1. Download `ingest-benchmark-for-twitch-macos-arm64.zip`
+2. Unzip — you get `ingest-benchmark-for-twitch.plugin`
 3. Copy the `.plugin` bundle to:
    ```
    ~/Library/Application Support/obs-studio/plugins/
    ```
 4. Remove the quarantine flag that macOS places on files downloaded from the internet:
    ```sh
-   xattr -cr ~/Library/Application\ Support/obs-studio/plugins/obs-twitch-ingest-benchmark.plugin
+   xattr -cr ~/Library/Application\ Support/obs-studio/plugins/ingest-benchmark-for-twitch.plugin
    ```
 5. Restart OBS
 
@@ -63,8 +63,8 @@ Download the latest release for your platform from the [Releases](../../releases
 
 ### Windows (x64)
 
-1. Download `obs-twitch-ingest-benchmark-windows.zip`
-2. Unzip — you get `obs-twitch-ingest-benchmark.dll`
+1. Download `ingest-benchmark-for-twitch-windows.zip`
+2. Unzip — you get `ingest-benchmark-for-twitch.dll`
 3. Copy the `.dll` to your OBS plugins folder:
    ```
    C:\Program Files\obs-studio\obs-plugins\64bit\
@@ -142,8 +142,8 @@ git clone --depth 1 --branch 32.1.0 \
 **Step 4 — Clone and build this plugin**
 
 ```sh
-git clone https://github.com/StephanBeutel/obs-twitch-ingest-benchmark.git
-cd obs-twitch-ingest-benchmark
+git clone https://github.com/StephanBeutel/ingest-benchmark-for-twitch.git
+cd ingest-benchmark-for-twitch
 
 cmake -B build \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -212,8 +212,8 @@ cmake --install C:\obs-build --config RelWithDebInfo --component Development
 **Step 4 — Clone and build this plugin**
 
 ```powershell
-git clone https://github.com/StephanBeutel/obs-twitch-ingest-benchmark.git
-cd obs-twitch-ingest-benchmark
+git clone https://github.com/StephanBeutel/ingest-benchmark-for-twitch.git
+cd ingest-benchmark-for-twitch
 
 # Find the obs-deps path that OBS downloaded during configure
 $obsDeps = Get-ChildItem "C:\obs-src\.deps" -Directory |
@@ -230,7 +230,7 @@ cmake -B build -G "Visual Studio 17 2022" -A x64 `
 cmake --build build --config RelWithDebInfo --parallel
 
 # Copy DLL to OBS plugins folder
-$dll = Get-ChildItem build -Recurse -Filter "obs-twitch-ingest-benchmark.dll" |
+$dll = Get-ChildItem build -Recurse -Filter "ingest-benchmark-for-twitch.dll" |
          Select-Object -First 1
 Copy-Item $dll.FullName "C:\Program Files\obs-studio\obs-plugins\64bit\"
 ```
@@ -261,7 +261,7 @@ Restart OBS to pick up the plugin.
 | Windows: `Could not find OBS libraries` | Ensure the OBS mini-build completed and `C:\obs-install` exists |
 | Windows: linker errors about missing `.lib` | Do not use the OBS Windows release zip — it contains no import libs; build from source as described above |
 
-OBS plugin logs are written to **Help → Log Files → Current Log**. Search for `[obs-twitch-ingest-benchmark]` to filter plugin output.
+OBS plugin logs are written to **Help → Log Files → Current Log**. Search for `[ingest-benchmark-for-twitch]` to filter plugin output.
 
 ---
 
