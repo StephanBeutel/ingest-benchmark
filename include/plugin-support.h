@@ -5,7 +5,7 @@
 
 #include <obs-module.h>
 
-#define PLUGIN_NAME "obs-twitch-ingest-benchmark"
+#define PLUGIN_NAME "ingest-benchmark-for-twitch"
 
 // blog wrappers — use these instead of bare blog()
 #define TLOG_INFO(fmt, ...)  blog(LOG_INFO,    "[" PLUGIN_NAME "] " fmt, ##__VA_ARGS__)

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(obs-twitch-ingest-benchmark
+project(ingest-benchmark-for-twitch
     VERSION 1.0.0
     DESCRIPTION "Benchmarks Twitch ingest servers and selects the best one"
     LANGUAGES C CXX)

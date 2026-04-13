@@ -1,4 +1,4 @@
-# obs-twitch-ingest-benchmark — Build Instructions
+# ingest-benchmark-for-twitch — Build Instructions
 
 ## Prerequisites
 
@@ -49,7 +49,7 @@ export OBS_ROOT="$HOME/obs-install"
 ### 3. Configure and build the plugin
 
 ```sh
-cd obs-twitch-ingest-benchmark
+cd ingest-benchmark-for-twitch
 
 cmake -B build \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -62,9 +62,9 @@ cmake --build build --config RelWithDebInfo
 ### 4. Install the plugin
 
 ```sh
-PLUGIN_DIR="$HOME/Library/Application Support/obs-studio/plugins/obs-twitch-ingest-benchmark"
+PLUGIN_DIR="$HOME/Library/Application Support/obs-studio/plugins/ingest-benchmark-for-twitch"
 mkdir -p "$PLUGIN_DIR/bin"
-cp build/libobs-twitch-ingest-benchmark.dylib "$PLUGIN_DIR/bin/"
+cp build/libingest-benchmark-for-twitch.dylib "$PLUGIN_DIR/bin/"
 ```
 
 Restart OBS. The **Twitch Ingest Benchmark** dock should appear under **Docks** menu.
@@ -100,7 +100,7 @@ $env:QT_ROOT = "C:\Qt\6.6.0\msvc2019_64"
 ### 3. Configure and build
 
 ```powershell
-cd obs-twitch-ingest-benchmark
+cd ingest-benchmark-for-twitch
 
 cmake -B build -G "Visual Studio 17 2022" -A x64 `
   -DCMAKE_PREFIX_PATH="$env:OBS_ROOT;$env:QT_ROOT" `
@@ -113,7 +113,7 @@ cmake --build build --config RelWithDebInfo
 
 ```powershell
 $OBS_PLUGIN_DIR = "C:\Program Files\obs-studio\obs-plugins\64bit"
-Copy-Item build\RelWithDebInfo\obs-twitch-ingest-benchmark.dll $OBS_PLUGIN_DIR
+Copy-Item build\RelWithDebInfo\ingest-benchmark-for-twitch.dll $OBS_PLUGIN_DIR
 ```
 
 Restart OBS. The dock will appear under **Docks** → **Twitch Ingest Benchmark**.
@@ -124,10 +124,10 @@ Restart OBS. The dock will appear under **Docks** → **Twitch Ingest Benchmark*
 
 ```sh
 # Copy or symlink this plugin into obs-studio/plugins/
-cp -r obs-twitch-ingest-benchmark /path/to/obs-studio/plugins/
+cp -r ingest-benchmark-for-twitch /path/to/obs-studio/plugins/
 
 # Add to obs-studio/plugins/CMakeLists.txt:
-#   add_subdirectory(obs-twitch-ingest-benchmark)
+#   add_subdirectory(ingest-benchmark-for-twitch)
 
 # Then build OBS normally:
 cmake --build /path/to/obs-studio/build
@@ -144,6 +144,6 @@ correct location automatically.
 |---------|-----|
 | `Could not find OBS libraries` | Set `-DOBS_ROOT=` or add OBS install prefix to `CMAKE_PREFIX_PATH` |
 | `Qt6 not found` | Set `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.x.y/platform` |
-| Plugin loads but dock is missing | Check OBS log (`Help → Log Files`) for `[obs-twitch-ingest-benchmark]` entries |
+| Plugin loads but dock is missing | Check OBS log (`Help → Log Files`) for `[ingest-benchmark-for-twitch]` entries |
 | Benchmark hangs | Check firewall — TCP 1935 to `*.live-video.net` must be reachable |
 | `applyStreamServer failed` | Ensure OBS stream service is set to **Twitch** (not Custom RTMP) |
