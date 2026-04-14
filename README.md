@@ -1,3 +1,5 @@
+<img src="doc/icon.svg" width="48" height="48" align="left" style="margin-right:12px"/>
+
 # ingest-benchmark
 
 An OBS Studio plugin that benchmarks all Twitch ingest servers and automatically applies the fastest one before you start streaming.
