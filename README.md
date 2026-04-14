@@ -1,8 +1,8 @@
-# ingest-benchmark-for-twitch
+# ingest-benchmark
 
 An OBS Studio plugin that benchmarks all Twitch ingest servers and automatically applies the fastest one before you start streaming.
 
-![Twitch Ingest Benchmark dock](doc/ingest-benchmark-for-twitch-dock.png)
+![Twitch Ingest Benchmark dock](doc/ingest-benchmark-dock.png)
 
 ## Features
 
@@ -49,15 +49,15 @@ Download the latest release for your platform from the [Releases](../../releases
 
 ### macOS (Apple Silicon)
 
-1. Download `ingest-benchmark-for-twitch-vx.x.x-macos-arm64.zip`
-2. Unzip — you get `ingest-benchmark-for-twitch.plugin`
+1. Download `ingest-benchmark-vx.x.x-macos-arm64.zip`
+2. Unzip — you get `ingest-benchmark.plugin`
 3. Copy the `.plugin` bundle to:
    ```
    ~/Library/Application Support/obs-studio/plugins/
    ```
 4. Remove the quarantine flag that macOS places on files downloaded from the internet:
    ```sh
-   xattr -cr ~/Library/Application\ Support/obs-studio/plugins/ingest-benchmark-for-twitch.plugin
+   xattr -cr ~/Library/Application\ Support/obs-studio/plugins/ingest-benchmark.plugin
    ```
 5. Restart OBS
 
@@ -65,12 +65,12 @@ Download the latest release for your platform from the [Releases](../../releases
 >
 > | macOS Gatekeeper error | OBS plugin load failure |
 > |---|---|
-> | ![Gatekeeper error](doc/ingest-benchmark-for-twitch.error1.png) | ![OBS plugin failed to load](doc/ingest-benchmark-for-twitch.error2.png) |
+> | ![Gatekeeper error](doc/ingest-benchmark.error1.png) | ![OBS plugin failed to load](doc/ingest-benchmark.error2.png) |
 
 ### Windows (x64)
 
-1. Download `ingest-benchmark-for-twitch-vx.x.x-windows.zip`
-2. Unzip — you get `ingest-benchmark-for-twitch.dll`
+1. Download `ingest-benchmark-vx.x.x-windows.zip`
+2. Unzip — you get `ingest-benchmark.dll`
 3. Copy the `.dll` to your OBS plugins folder:
    ```
    C:\Program Files\obs-studio\obs-plugins\64bit\
@@ -148,8 +148,8 @@ git clone --depth 1 --branch 32.1.0 \
 **Step 4 — Clone and build this plugin**
 
 ```sh
-git clone https://github.com/StephanBeutel/ingest-benchmark-for-twitch.git
-cd ingest-benchmark-for-twitch
+git clone https://github.com/StephanBeutel/ingest-benchmark.git
+cd ingest-benchmark
 
 cmake -B build \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -218,8 +218,8 @@ cmake --install C:\obs-build --config RelWithDebInfo --component Development
 **Step 4 — Clone and build this plugin**
 
 ```powershell
-git clone https://github.com/StephanBeutel/ingest-benchmark-for-twitch.git
-cd ingest-benchmark-for-twitch
+git clone https://github.com/StephanBeutel/ingest-benchmark.git
+cd ingest-benchmark
 
 # Find the obs-deps path that OBS downloaded during configure
 $obsDeps = Get-ChildItem "C:\obs-src\.deps" -Directory |
@@ -236,7 +236,7 @@ cmake -B build -G "Visual Studio 17 2022" -A x64 `
 cmake --build build --config RelWithDebInfo --parallel
 
 # Copy DLL to OBS plugins folder
-$dll = Get-ChildItem build -Recurse -Filter "ingest-benchmark-for-twitch.dll" |
+$dll = Get-ChildItem build -Recurse -Filter "ingest-benchmark.dll" |
          Select-Object -First 1
 Copy-Item $dll.FullName "C:\Program Files\obs-studio\obs-plugins\64bit\"
 ```
@@ -267,7 +267,7 @@ Restart OBS to pick up the plugin.
 | Windows: `Could not find OBS libraries` | Ensure the OBS mini-build completed and `C:\obs-install` exists |
 | Windows: linker errors about missing `.lib` | Do not use the OBS Windows release zip — it contains no import libs; build from source as described above |
 
-OBS plugin logs are written to **Help → Log Files → Current Log**. Search for `[ingest-benchmark-for-twitch]` to filter plugin output.
+OBS plugin logs are written to **Help → Log Files → Current Log**. Search for `[ingest-benchmark]` to filter plugin output.
 
 ---
 
@@ -288,6 +288,8 @@ Each component is normalised to `[0, 1]` across all servers in the run. The serv
 
 ## License
 
-Copyright (c) 2026 Stephan Beutel. All rights reserved.
+Copyright (C) 2026 Stephan Beutel
 
-This software is proprietary. Unauthorized copying, distribution, or modification is prohibited. See [LICENSE](LICENSE) for details.
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for details.

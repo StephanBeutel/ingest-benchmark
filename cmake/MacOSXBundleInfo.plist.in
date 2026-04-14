@@ -6,15 +6,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>ingest-benchmark-for-twitch</string>
+    <string>ingest-benchmark</string>
     <key>CFBundleExecutable</key>
-    <string>ingest-benchmark-for-twitch</string>
+    <string>ingest-benchmark</string>
     <key>CFBundleIdentifier</key>
-    <string>com.yourname.ingest-benchmark-for-twitch</string>
+    <string>com.yourname.ingest-benchmark</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>ingest-benchmark-for-twitch</string>
+    <string>ingest-benchmark</string>
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleShortVersionString</key>

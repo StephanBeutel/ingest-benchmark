@@ -39,7 +39,7 @@ std::string IngestFetcher::httpGet(const std::string &url, int timeoutMs)
         return {};
     }
 
-    std::string userAgent = "ingest-benchmark-for-twitch/" PLUGIN_VERSION;
+    std::string userAgent = "ingest-benchmark/" PLUGIN_VERSION;
 
     curl_easy_setopt(curl, CURLOPT_URL,            url.c_str());
     curl_easy_setopt(curl, CURLOPT_USERAGENT,       userAgent.c_str());
